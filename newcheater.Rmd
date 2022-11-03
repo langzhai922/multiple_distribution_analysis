@@ -1,0 +1,229 @@
+---
+title: "newcheater"
+author: "Augustus Chu"
+date: '2022-10-01'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(plotrix)
+```
+
+```{r}
+data <- read_csv("ChildrenScores.csv")
+```
+To find the cheating teachers, we must first consider assumptions. The variation between students is likely too high to compare with the entire population. Student scores may also differ as different teachers can be better at teaching different types of students. Therefore, comparing the class a specific teacher taught with the average scores of each student in their class across all 5 years is a more viable method.
+
+```{r}
+# splitting up data into each class across all 5 years
+# find the cheating teachers
+a3 <- data %>% group_by(teacherY3) %>%
+  summarise(avg_year3 = mean(scoreY3), avg_year4 = mean(scoreY4),
+            avg_year5 = mean(scoreY5), avg_year6 = mean(scoreY6), avg_year7 = mean(scoreY7),
+            avg_overall = sum(avg_year3, avg_year4, avg_year5, avg_year6, avg_year7)/5,
+            se = std.error(c(meanScore))) %>%
+  select(teacher = teacherY3, avg_year = avg_year3, avg_overall, se) %>%
+  mutate(residuals = (avg_year - avg_overall))
+
+a4 <- data %>% group_by(teacherY4) %>%
+  summarise(avg_year3 = mean(scoreY3), avg_year4 = mean(scoreY4),
+            avg_year5 = mean(scoreY5), avg_year6 = mean(scoreY6), avg_year7 = mean(scoreY7),
+            avg_overall = sum(avg_year3, avg_year4, avg_year5, avg_year6, avg_year7)/5,
+            se = std.error(c(meanScore))) %>%
+  select(teacher = teacherY4, avg_year = avg_year4, avg_overall, se) %>%
+  mutate(residuals = (avg_year - avg_overall))
+
+a5 <- data %>% group_by(teacherY5) %>%
+  summarise(avg_year3 = mean(scoreY3), avg_year4 = mean(scoreY4),
+            avg_year5 = mean(scoreY5), avg_year6 = mean(scoreY6), avg_year7 = mean(scoreY7),
+            avg_overall = sum(avg_year3, avg_year4, avg_year5, avg_year6, avg_year7)/5,
+            se = std.error(c(meanScore))) %>%
+  select(teacher = teacherY5, avg_year = avg_year5, avg_overall, se) %>%
+  mutate(residuals = (avg_year - avg_overall))
+
+a6 <- data %>% group_by(teacherY6) %>%
+  summarise(avg_year3 = mean(scoreY3), avg_year4 = mean(scoreY4),
+            avg_year5 = mean(scoreY5), avg_year6 = mean(scoreY6), avg_year7 = mean(scoreY7),
+            avg_overall = sum(avg_year3, avg_year4, avg_year5, avg_year6, avg_year7)/5,
+            se = std.error(c(meanScore))) %>%
+  select(teacher = teacherY6, avg_year = avg_year6, avg_overall, se) %>%
+  mutate(residuals = (avg_year - avg_overall))
+
+a7 <- data %>% group_by(teacherY7) %>%
+  summarise(avg_year3 = mean(scoreY3), avg_year4 = mean(scoreY4),
+            avg_year5 = mean(scoreY5), avg_year6 = mean(scoreY6), avg_year7 = mean(scoreY7),
+            avg_overall = sum(avg_year3, avg_year4, avg_year5, avg_year6, avg_year7)/5,
+            se = std.error(c(meanScore))) %>%
+  select(teacher = teacherY7, avg_year = avg_year7, avg_overall, se) %>%
+  mutate(residuals = (avg_year - avg_overall))
+
+alldata <- bind_rows(a3, a4, a5, a6, a7)
+
+# comparing the cheating teachers and honest teachers residual average test scores
+alldata %>%
+  mutate(Residuals = ifelse(residuals < 2, "honest", "cheat")) %>%
+  ggplot(aes(x = residuals, fill = Residuals)) + geom_histogram(bins = 50) + ggtitle("Residuals for Students Average Score")
+
+```
+
+We can see a clear split in the data, where residuals > 3 would be the cheaters and residuals < 3 would be the non-cheaters.
+
+```{r}
+# printing out all the cheating teachers
+cheaters <- alldata %>% filter(residuals > 3)
+honest <- alldata %>% filter(residuals <= 3)
+cheat.teachers <- cheaters$teacher
+cheat.teachers
+```
+
+```{r}
+# get df for each student associated with cheaters, the mean score without the cheating score, and the cheating score
+cheat.student <- data %>% 
+  filter(teacherY3 %in% cheat.teachers | 
+           teacherY4 %in% cheat.teachers | 
+           teacherY5 %in% cheat.teachers | 
+           teacherY6 %in% cheat.teachers | 
+           teacherY7 %in% cheat.teachers) %>%
+  mutate(cheatScore = NaN)
+
+# for each row, calculate the clean mean
+# if a student has multiple cheating teachers, find and us the mean of the cheated scores to find residuals
+for (i in 1:nrow(cheat.student)) {
+  if (cheat.student[i,3] %in% cheat.teachers){
+    cheat.student[i,14] = mean(c(as.numeric(cheat.student[i,14]), as.numeric(cheat.student[i,8])), na.rm = TRUE)
+    cheat.student[i,8] = NaN
+  }
+  if (cheat.student[i,4] %in% cheat.teachers){
+    cheat.student[i,14] = mean(c(as.numeric(cheat.student[i,14]), as.numeric(cheat.student[i,9])), na.rm = TRUE)
+    cheat.student[i,9] = NaN
+  }
+  if (cheat.student[i,5] %in% cheat.teachers){
+    cheat.student[i,14] = mean(c(as.numeric(cheat.student[i,14]), as.numeric(cheat.student[i,10])), na.rm = TRUE)
+    cheat.student[i,10] = NaN
+  }
+  if (cheat.student[i,6] %in% cheat.teachers){
+    cheat.student[i,14] = mean(c(as.numeric(cheat.student[i,14]), as.numeric(cheat.student[i,11])), na.rm = TRUE)
+    cheat.student[i,11] = NaN
+  }
+  if (cheat.student[i,7] %in% cheat.teachers){
+    cheat.student[i,14] = mean(c(as.numeric(cheat.student[i,14]), as.numeric(cheat.student[i,12])), na.rm = TRUE)
+    cheat.student[i,12] = NaN
+  }
+}
+
+cheat.student$cleanMean <- 0
+
+for (i in 1:nrow(cheat.student)){
+  cheat.student$cleanMean[i] <- round(rowMeans(cheat.student[i,c(8:12)], na.rm = TRUE),2)
+}
+
+# calculating the residuals for the cheating teachers
+cheat.student$residuals <- cheat.student$cheatScore - cheat.student$cleanMean
+```
+
+```{r}
+# plotting density function for residuals for cheating teachers
+cheat.student %>% 
+  ggplot(aes(x = residuals)) + geom_density(col = "red", fill = "pink") + xlab("Residuals") + ylab("Density") + ggtitle("Density function for Cheater Residuals")
+
+mean(cheat.student$residuals)
+sd(cheat.student$residuals)
+```
+
+
+```{r}
+# for teachers who were not cheaters, the residuals are between the mean score and the scores across all 5 years
+honest.student <- data %>%
+  filter(!(teacherY3 %in% cheat.teachers | 
+           teacherY4 %in% cheat.teachers | 
+           teacherY5 %in% cheat.teachers | 
+           teacherY6 %in% cheat.teachers | 
+           teacherY7 %in% cheat.teachers)) %>%
+  mutate(r3 = meanScore - scoreY3, r4 = meanScore - scoreY4,
+         r5 = meanScore - scoreY5, r6 = meanScore - scoreY6,
+         r7 = meanScore - scoreY7)
+
+# create df of residuals for plotting
+honest.residuals <- data.frame(a = unlist(honest.student[,c(14:18)], use.names = FALSE))
+
+# get mean and sd for data
+mean(honest.residuals$a)
+sd(honest.residuals$a)
+```
+
+```{r}
+honest.residuals %>% 
+  ggplot(aes(x = a)) + geom_density(col = "darkblue", fill = "lightblue") + xlab("Residuals") + ylab("Density") + ggtitle("Density function for Honest Residuals")
+```
+
+```{r}
+# Maximum Likelihood function 1
+maxLikelihood.func <- function(dat, xvar="x", yvar="y", startvec=c(0.1,1,5)){
+        dat.x <- dat[,xvar]
+        dat.y <- dat[,yvar]
+        objective.func <- function(pars){
+                q <- pars[1]
+                mu1 <- pars[2]
+                sigma1 <- pars[3]
+                maxLike <- -sum(log((q)*dnorm(dat.y, mean = 0, sd = 2.205753) +
+                                      (1-q)*dnorm(dat.y, mean = mu1, sd = sigma1)))
+                if(!is.finite(maxLike)) {
+                  maxLike <- 694206942069420
+                }
+                return(maxLike)
+        }
+        ml.func <- nlm(f=objective.func, p=startvec)
+        return(ml.func)
+}
+```
+
+```{r}
+# Maximum Likelihood function 2
+maxLikelihoodBootstrap.func <- function(dat, xvar="x", yvar="y", startvec=c(0.1,1,5), nboot=10){
+        ndat <- nrow(dat)
+        boot.res <- data.frame(bootrep=1:nboot, ML.a=rep(NA, nboot), ML.b=rep(NA, nboot))
+        for(i in 1:nboot){
+                resampleRows <- sample(1:ndat, size=ndat, replace=TRUE)
+                dat.boot <- dat[resampleRows, ]
+                MLfit.boot <- maxLikelihood.func(dat.boot, xvar, yvar, startvec)
+                boot.res$ML.a[i] <- MLfit.boot$estimate[1]
+                boot.res$ML.b[i] <- MLfit.boot$estimate[2]
+        }
+        se.a.ML <- sd(boot.res$ML.a)
+        se.b.ML <- sd(boot.res$ML.b)
+        CI.a.ML <- quantile (boot.res$ML.a, probs=c(0.025, 0.975))
+        CI.b.ML <- quantile(boot.res$ML.b, probs=c(0.025, 0.975))
+        return(list(stderror=c(ML.a=se.a.ML, ML.b=se.b.ML), CI.a.ML=CI.a.ML, CI.b.ML=CI.b.ML))
+}
+```
+
+```{r}
+# calculate mean/sd from cheating population
+# get CI for these values
+testdf <- data.frame(cheat.student %>% select(cheatScore, residuals))
+ML.mod <- maxLikelihood.func(testdf, "cheatScore", "residuals")
+ML.BS <- maxLikelihoodBootstrap.func(testdf, "cheatScore", "residuals")
+
+# our estimates
+ML.mod
+ML.BS
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
