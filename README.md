@@ -1,6 +1,6 @@
 ### Multiple Distribution Analysis
 
-In this project, I analyse a data set of students with information about their teachers and test scores across 5 years. In this data set, there are certain teachers which cheat by increasing their classes scores. I used data analysis and statistical methods to figure out which teachers were cheating and which teachers were honest.
+In this project, I analyse a data set of students with information about their teachers and test scores across 5 years. In this data set, there are certain teachers which cheat by increasing their student's test scores. I used data analysis and statistical methods to figure out which teachers were cheating and which teachers were honest.
 
 I created a video which explains the process of this project: https://youtu.be/usvZqmSxeGA
 
